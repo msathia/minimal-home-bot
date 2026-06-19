@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram Ollama AI Bot Engine Daemon
+After=network.target ollama.service
+
+[Service]
+ExecStart=/home/sathia/minimal-home-bot/.venv/bin/python /home/sathia/minimal-home-bot/ai_bot/ai_bot.py
+WorkingDirectory=/home/sathia/minimal-home-bot
+User=sathia
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/default/aibot
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

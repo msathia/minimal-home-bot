@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCK_FILE="/tmp/homebot-refresh-${USER:-user}.lock"
+
+mkdir -p "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "Another homebot refresh is already running."
+  exit 75
+fi
+
+if [[ -n "$(git -C "$REPO_DIR" status --porcelain)" ]]; then
+  echo "minimal-home-bot has uncommitted changes; refusing to pull."
+  git -C "$REPO_DIR" status --short
+  exit 1
+fi
+
+branch="$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)"
+upstream="$(git -C "$REPO_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+if [[ -z "$upstream" ]]; then
+  upstream="origin/${branch}"
+fi
+
+git -C "$REPO_DIR" fetch origin
+read -r ahead behind < <(git -C "$REPO_DIR" rev-list --left-right --count "HEAD...${upstream}")
+
+if (( ahead > 0 && behind > 0 )); then
+  echo "minimal-home-bot has diverged from ${upstream}; resolve manually."
+  exit 1
+elif (( ahead > 0 )); then
+  echo "minimal-home-bot has local commits not on ${upstream}; refusing to deploy."
+  exit 1
+elif (( behind > 0 )); then
+  git -C "$REPO_DIR" pull --ff-only
+else
+  echo "minimal-home-bot already up to date."
+fi
+
+python3 -m venv "${REPO_DIR}/.venv"
+"${REPO_DIR}/.venv/bin/pip" install -r "${REPO_DIR}/ai_bot/requirements.txt"
+
+sudo systemctl restart aibot.service
+systemctl is-active aibot.service
+echo "aibot.service restarted. Monitor with: journalctl -u aibot -f"
