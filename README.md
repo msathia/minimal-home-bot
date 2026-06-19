@@ -8,11 +8,11 @@ Build a **home-based Telegram AI bot** on a **minimal-footprint machine** — lo
 >
 > | Resource | Minimum | Comfortable | What consumes it |
 > |----------|---------|-------------|------------------|
-> | **RAM** | 4 GB | 8 GB+ | Xubuntu Minimal idle ~600 MB; `llama3.2:3b` inference ~2–3 GB peak; the Telegram bot and yt-dlp skill add only tens of MB |
-> | **Linux disk** | ~32 GB | 64 GB+ | Xubuntu Minimal ~8–15 GB; Ollama + `llama3.2:3b` model ~2 GB; headroom for logs and updates |
+> | **RAM** | 4 GB | 8 GB+ | Xubuntu Minimal idle ~600 MB; `qwen3:4b` inference is the default and usually fits an 8 GB machine; the Telegram bot and yt-dlp skill add only tens of MB |
+> | **Linux disk** | ~32 GB | 64 GB+ | Xubuntu Minimal ~8–15 GB; Ollama + `qwen3:4b` model ~3 GB; headroom for logs and updates |
 > | **Dual-boot disk** | ~128 GB total | 256 GB+ | macOS slice (~50–100 GB) + Linux slice (see above); partition sizes scale down — you do not need 1 TB |
 >
-> A smaller SSD, an older laptop, or a Linux-only install (no macOS slice) all fit this blueprint. Scale the model down further (e.g. `llama3.2:1b`) if RAM is tight.
+> A smaller SSD, an older laptop, or a Linux-only install (no macOS slice) all fit this blueprint. Scale the model down further (e.g. `qwen3:1.7b` or `llama3.2:1b`) if RAM is tight.
 
 See **[NETWORKING.md](NETWORKING.md)** for how your home machine reaches Telegram over the internet (long polling, NAT, and protocol flow).
 
@@ -146,8 +146,20 @@ sudo apt install midori -y
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 systemctl status ollama
-ollama pull llama3.2:3b
+ollama pull qwen3:4b
 ```
+
+`qwen3:4b` is the default model because it is a strong quality upgrade over the previous `llama3.2:3b` default while still fitting the 8 GB iMac target. If the machine starts swapping or feels too slow, use `qwen3:1.7b`; if it has more RAM, try `qwen3:8b`.
+
+The bot reads these optional environment settings:
+
+```bash
+export OLLAMA_MODEL=qwen3:4b
+export OLLAMA_NUM_CTX=8192
+export OLLAMA_NUM_PREDICT=1024
+```
+
+The service installer writes these values to `/etc/default/aibot`. `OLLAMA_NUM_CTX=8192` keeps memory use conservative for the 8 GB iMac while giving the bot more room than Ollama's small default context.
 
 ### Python Virtual Environment
 
@@ -240,6 +252,32 @@ Future bot updates:
 homebot-refresh
 ```
 
+### Upgrade an Existing iMac Install to Qwen
+
+On the Xubuntu iMac:
+
+```bash
+cd ~/minimal-home-bot
+git pull --ff-only
+curl -fsSL https://ollama.com/install.sh | sh
+ollama --version
+ollama pull qwen3:4b
+homebot-refresh
+```
+
+If `homebot-refresh` is not installed yet, run the script directly:
+
+```bash
+./scripts/imac-refresh.sh
+```
+
+The refreshed bot defaults to `qwen3:4b`. To override it for the service, set `OLLAMA_MODEL` before reinstalling the service:
+
+```bash
+export OLLAMA_MODEL=qwen3:1.7b
+./scripts/imac-install.sh sathia YOUR_TELEGRAM_TOKEN
+```
+
 Manual restart:
 
 ```bash
@@ -256,7 +294,7 @@ journalctl -u aibot -f
 
 ## Hardware Notes
 
-- **RAM:** 4 GB minimum, 8 GB+ comfortable — use `llama3.2:3b` or similarly small models.
+- **RAM:** 4 GB minimum, 8 GB+ comfortable — use `qwen3:4b` by default, or `qwen3:1.7b` for tighter machines.
 - **Storage:** HDD works but SSD is faster for model loads; minimal install reduces background I/O.
 - **Wi-Fi (Apple hardware):** Enable third-party drivers during install for Broadcom Wi-Fi chips.
 

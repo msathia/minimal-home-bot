@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCK_FILE="/tmp/homebot-refresh-${USER:-user}.lock"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:4b}"
 
 mkdir -p "$(dirname "$LOCK_FILE")"
 exec 9>"$LOCK_FILE"
@@ -40,6 +41,16 @@ fi
 
 python3 -m venv "${REPO_DIR}/.venv"
 "${REPO_DIR}/.venv/bin/pip" install -r "${REPO_DIR}/ai_bot/requirements.txt"
+
+if command -v ollama >/dev/null 2>&1; then
+  if ollama show "$OLLAMA_MODEL" >/dev/null 2>&1; then
+    echo "Ollama model ${OLLAMA_MODEL} already installed."
+  else
+    ollama pull "$OLLAMA_MODEL"
+  fi
+else
+  echo "WARNING: ollama command not found; install Ollama and pull ${OLLAMA_MODEL} before using the bot."
+fi
 
 sudo systemctl restart aibot.service
 systemctl is-active aibot.service

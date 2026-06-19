@@ -3,6 +3,9 @@ set -euo pipefail
 
 USERNAME="${1:-$(whoami)}"
 TOKEN="${2:-${TELEGRAM_TOKEN:-}}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:4b}"
+OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-8192}"
+OLLAMA_NUM_PREDICT="${OLLAMA_NUM_PREDICT:-1024}"
 
 if [[ -z "$TOKEN" ]]; then
   echo "Usage: $0 [username] TELEGRAM_TOKEN"
@@ -31,10 +34,20 @@ python3 -m venv "$VENV_DIR"
 echo "==> Writing service environment to ${ENV_FILE}"
 {
   printf "TELEGRAM_TOKEN=%s\n" "$TOKEN"
+  printf "OLLAMA_MODEL=%s\n" "$OLLAMA_MODEL"
+  printf "OLLAMA_NUM_CTX=%s\n" "$OLLAMA_NUM_CTX"
+  printf "OLLAMA_NUM_PREDICT=%s\n" "$OLLAMA_NUM_PREDICT"
   printf "NANOBOT_SKILLS_DIR=%s\n" "${REPO_DIR}/nanobot/skills"
   printf "HOME_BOT_EXTERNAL_WORKER=%s\n" "${HOME_BOT_EXTERNAL_WORKER:-}"
   printf "HOME_BOT_EXTERNAL_TIMEOUT=%s\n" "${HOME_BOT_EXTERNAL_TIMEOUT:-120}"
 } > "$TMP_ENV"
+
+if command -v ollama >/dev/null 2>&1; then
+  echo "==> Pulling Ollama model ${OLLAMA_MODEL}"
+  ollama pull "$OLLAMA_MODEL"
+else
+  echo "WARNING: ollama command not found; install Ollama and pull ${OLLAMA_MODEL} before starting the bot."
+fi
 
 echo "==> Rendering systemd unit for ${USERNAME}"
 while IFS= read -r line; do

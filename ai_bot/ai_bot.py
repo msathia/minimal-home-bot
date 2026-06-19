@@ -15,6 +15,9 @@ logging.basicConfig(
 )
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "YOUR_TELEGRAM_TOKEN_HERE")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "8192"))
+OLLAMA_NUM_PREDICT = int(os.environ.get("OLLAMA_NUM_PREDICT", "1024"))
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SKILLS_DIR = REPO_ROOT / "nanobot" / "skills"
 LEGACY_SKILLS_DIR = Path.home() / "nanobot" / "skills"
@@ -94,7 +97,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     system_prompt = (
         "You are a helpful AI assistant running locally on a minimal-footprint home machine "
         "using Xubuntu Minimal. You are efficient, concise, and aware of "
-        "your hardware limitations. Your creator is Sathia."
+        "your hardware limitations. Your creator is Sathia. /no_think"
     )
 
     messages = [
@@ -131,8 +134,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         response = ollama.chat(
-            model="llama3.2:3b",
+            model=OLLAMA_MODEL,
             messages=messages,
+            options={
+                "num_ctx": OLLAMA_NUM_CTX,
+                "num_predict": OLLAMA_NUM_PREDICT,
+            },
         )
         await update.message.reply_text(response["message"]["content"])
     except Exception as exc:
