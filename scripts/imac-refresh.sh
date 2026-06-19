@@ -9,7 +9,34 @@ while [[ -L "$SCRIPT_PATH" ]]; do
 done
 REPO_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 LOCK_FILE="/tmp/homebot-refresh-${USER:-user}.lock"
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:4b}"
+ENV_FILE="/etc/default/aibot"
+OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
+OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-4096}"
+OLLAMA_NUM_PREDICT="${OLLAMA_NUM_PREDICT:-512}"
+OLLAMA_TIMEOUT="${OLLAMA_TIMEOUT:-300}"
+OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-10m}"
+
+upsert_service_env() {
+  local key="$1"
+  local value="$2"
+  local tmp_env
+
+  [[ -f "$ENV_FILE" ]] || return 0
+  tmp_env="$(mktemp)"
+  if sudo grep -q "^${key}=" "$ENV_FILE"; then
+    sudo awk -v key="$key" -v value="$value" '
+      BEGIN { prefix = key "=" }
+      index($0, prefix) == 1 { $0 = prefix value }
+      { print }
+    ' "$ENV_FILE" > "$tmp_env"
+  else
+    sudo cp "$ENV_FILE" "$tmp_env"
+    sudo chown "$(id -u):$(id -g)" "$tmp_env"
+    printf "%s=%s\n" "$key" "$value" >> "$tmp_env"
+  fi
+  sudo install -m 0600 "$tmp_env" "$ENV_FILE"
+  rm -f "$tmp_env"
+}
 
 mkdir -p "$(dirname "$LOCK_FILE")"
 exec 9>"$LOCK_FILE"
@@ -57,6 +84,12 @@ if command -v ollama >/dev/null 2>&1; then
 else
   echo "WARNING: ollama command not found; install Ollama and pull ${OLLAMA_MODEL} before using the bot."
 fi
+
+upsert_service_env OLLAMA_MODEL "$OLLAMA_MODEL"
+upsert_service_env OLLAMA_NUM_CTX "$OLLAMA_NUM_CTX"
+upsert_service_env OLLAMA_NUM_PREDICT "$OLLAMA_NUM_PREDICT"
+upsert_service_env OLLAMA_TIMEOUT "$OLLAMA_TIMEOUT"
+upsert_service_env OLLAMA_KEEP_ALIVE "$OLLAMA_KEEP_ALIVE"
 
 sudo systemctl restart aibot.service
 systemctl is-active aibot.service

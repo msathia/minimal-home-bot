@@ -16,9 +16,9 @@ logging.basicConfig(
 )
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "YOUR_TELEGRAM_TOKEN_HERE")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
-OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "8192"))
-OLLAMA_NUM_PREDICT = int(os.environ.get("OLLAMA_NUM_PREDICT", "1024"))
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "4096"))
+OLLAMA_NUM_PREDICT = int(os.environ.get("OLLAMA_NUM_PREDICT", "512"))
 OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "300"))
 OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "10m")
 REPO_ROOT = Path(__file__).resolve().parents[1]

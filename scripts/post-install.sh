@@ -31,7 +31,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 echo "==> Setting up repo-local AI bot virtual environment..."
 cd "$REPO_DIR"
 python3 -m venv .venv
-"${REPO_DIR}/.venv/bin/pip" install -r "${REPO_DIR}/ai_bot/requirements.txt"
+"${REPO_DIR}/.venv/bin/pip" install --upgrade -r "${REPO_DIR}/ai_bot/requirements.txt"
 
 echo "==> Pulling default Ollama model..."
 ollama pull llama3.2:3b
