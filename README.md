@@ -157,9 +157,11 @@ The bot reads these optional environment settings:
 export OLLAMA_MODEL=qwen3:4b
 export OLLAMA_NUM_CTX=8192
 export OLLAMA_NUM_PREDICT=1024
+export OLLAMA_TIMEOUT=300
+export OLLAMA_KEEP_ALIVE=10m
 ```
 
-The service installer writes these values to `/etc/default/aibot`. `OLLAMA_NUM_CTX=8192` keeps memory use conservative for the 8 GB iMac while giving the bot more room than Ollama's small default context.
+The service installer writes these values to `/etc/default/aibot`. `OLLAMA_NUM_CTX=8192` keeps memory use conservative for the 8 GB iMac while giving the bot more room than Ollama's small default context. `OLLAMA_TIMEOUT=300` gives the bot enough time for slow first-load model startup on older HDD systems, and `OLLAMA_KEEP_ALIVE=10m` keeps the model warm between nearby Telegram messages.
 
 ### Python Virtual Environment
 
@@ -168,7 +170,7 @@ pkill -f ai_bot.py || true
 sudo apt install python3-venv python3-pip -y
 cd ~/minimal-home-bot
 python3 -m venv .venv
-.venv/bin/pip install -r ai_bot/requirements.txt
+.venv/bin/pip install --upgrade -r ai_bot/requirements.txt
 ```
 
 ### Telegram Token

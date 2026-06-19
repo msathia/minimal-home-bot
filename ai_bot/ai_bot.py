@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from telegram import Update
@@ -18,6 +19,8 @@ TOKEN = os.environ.get("TELEGRAM_TOKEN", "YOUR_TELEGRAM_TOKEN_HERE")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
 OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", "8192"))
 OLLAMA_NUM_PREDICT = int(os.environ.get("OLLAMA_NUM_PREDICT", "1024"))
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "300"))
+OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "10m")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SKILLS_DIR = REPO_ROOT / "nanobot" / "skills"
 LEGACY_SKILLS_DIR = Path.home() / "nanobot" / "skills"
@@ -30,6 +33,7 @@ EXTERNAL_WORKER_PATH = os.environ.get("HOME_BOT_EXTERNAL_WORKER", "").strip()
 EXTERNAL_WORKER_SCRIPT = Path(EXTERNAL_WORKER_PATH).expanduser() if EXTERNAL_WORKER_PATH else None
 EXTERNAL_WORKER_TIMEOUT = int(os.environ.get("HOME_BOT_EXTERNAL_TIMEOUT", "120"))
 TELEGRAM_MESSAGE_SOFT_LIMIT = 3500
+OLLAMA_CLIENT = ollama.Client(timeout=OLLAMA_TIMEOUT)
 
 
 def chunk_text(value):
@@ -97,12 +101,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     system_prompt = (
         "You are a helpful AI assistant running locally on a minimal-footprint home machine "
         "using Xubuntu Minimal. You are efficient, concise, and aware of "
-        "your hardware limitations. Your creator is Sathia. /no_think"
+        "your hardware limitations. Your creator is Sathia."
     )
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_text},
+        {"role": "user", "content": f"{user_text}\n\n/no_think"},
     ]
 
     if await maybe_handle_external_worker(user_text, update):
@@ -133,17 +137,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning("yt-recommender skill failed: %s", exc)
 
     try:
-        response = ollama.chat(
+        started_at = time.monotonic()
+        logging.info(
+            "Sending request to Ollama model=%s num_ctx=%s num_predict=%s timeout=%ss keep_alive=%s",
+            OLLAMA_MODEL,
+            OLLAMA_NUM_CTX,
+            OLLAMA_NUM_PREDICT,
+            OLLAMA_TIMEOUT,
+            OLLAMA_KEEP_ALIVE,
+        )
+        response = OLLAMA_CLIENT.chat(
             model=OLLAMA_MODEL,
             messages=messages,
+            keep_alive=OLLAMA_KEEP_ALIVE,
             options={
                 "num_ctx": OLLAMA_NUM_CTX,
                 "num_predict": OLLAMA_NUM_PREDICT,
             },
         )
-        await update.message.reply_text(response["message"]["content"])
+        elapsed = time.monotonic() - started_at
+        content = response["message"]["content"]
+        logging.info(
+            "Ollama response completed model=%s elapsed=%.1fs chars=%s",
+            OLLAMA_MODEL,
+            elapsed,
+            len(content),
+        )
+        for reply in chunk_text(content):
+            await update.message.reply_text(reply)
     except Exception as exc:
-        logging.error("Inference processing failure occurred: %s", exc)
+        logging.exception("Inference processing failure occurred with model %s: %s", OLLAMA_MODEL, exc)
         await update.message.reply_text(
             "Engine error occurred during internal computing pass."
         )

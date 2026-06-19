@@ -6,6 +6,8 @@ TOKEN="${2:-${TELEGRAM_TOKEN:-}}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:4b}"
 OLLAMA_NUM_CTX="${OLLAMA_NUM_CTX:-8192}"
 OLLAMA_NUM_PREDICT="${OLLAMA_NUM_PREDICT:-1024}"
+OLLAMA_TIMEOUT="${OLLAMA_TIMEOUT:-300}"
+OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-10m}"
 
 if [[ -z "$TOKEN" ]]; then
   echo "Usage: $0 [username] TELEGRAM_TOKEN"
@@ -29,7 +31,7 @@ trap 'rm -f "$TMP_SERVICE" "$TMP_ENV"' EXIT
 echo "==> Creating Python virtual environment in ${VENV_DIR}"
 python3 -m venv "$VENV_DIR"
 "${VENV_DIR}/bin/pip" install --upgrade pip
-"${VENV_DIR}/bin/pip" install -r "${REPO_DIR}/ai_bot/requirements.txt"
+"${VENV_DIR}/bin/pip" install --upgrade -r "${REPO_DIR}/ai_bot/requirements.txt"
 
 echo "==> Writing service environment to ${ENV_FILE}"
 {
@@ -37,6 +39,8 @@ echo "==> Writing service environment to ${ENV_FILE}"
   printf "OLLAMA_MODEL=%s\n" "$OLLAMA_MODEL"
   printf "OLLAMA_NUM_CTX=%s\n" "$OLLAMA_NUM_CTX"
   printf "OLLAMA_NUM_PREDICT=%s\n" "$OLLAMA_NUM_PREDICT"
+  printf "OLLAMA_TIMEOUT=%s\n" "$OLLAMA_TIMEOUT"
+  printf "OLLAMA_KEEP_ALIVE=%s\n" "$OLLAMA_KEEP_ALIVE"
   printf "NANOBOT_SKILLS_DIR=%s\n" "${REPO_DIR}/nanobot/skills"
   printf "HOME_BOT_EXTERNAL_WORKER=%s\n" "${HOME_BOT_EXTERNAL_WORKER:-}"
   printf "HOME_BOT_EXTERNAL_TIMEOUT=%s\n" "${HOME_BOT_EXTERNAL_TIMEOUT:-120}"

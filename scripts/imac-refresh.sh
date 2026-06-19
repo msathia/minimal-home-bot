@@ -46,7 +46,7 @@ else
 fi
 
 python3 -m venv "${REPO_DIR}/.venv"
-"${REPO_DIR}/.venv/bin/pip" install -r "${REPO_DIR}/ai_bot/requirements.txt"
+"${REPO_DIR}/.venv/bin/pip" install --upgrade -r "${REPO_DIR}/ai_bot/requirements.txt"
 
 if command -v ollama >/dev/null 2>&1; then
   if ollama show "$OLLAMA_MODEL" >/dev/null 2>&1; then
