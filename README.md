@@ -35,6 +35,7 @@ See **[NETWORKING.md](NETWORKING.md)** for how your home machine reaches Telegra
 └── scripts/
     ├── imac-install.sh        # One-time service install wrapper
     ├── imac-refresh.sh        # Pull bot updates, update deps, restart service
+    ├── ollama-prune-models.sh # Keep one Ollama model and remove the rest
     ├── post-install.sh        # Post-Xubuntu setup automation
     └── install-service.sh     # Deploy and enable systemd service
 ```
@@ -149,7 +150,7 @@ systemctl status ollama
 ollama pull llama3.2:3b
 ```
 
-`llama3.2:3b` is the default model because it gives the 8 GB Intel iMac a more responsive CPU-only path than Qwen. Qwen models can produce better answers on stronger hardware, but `qwen3:4b` was too slow for this target machine.
+`llama3.2:3b` is the default model because it gives the 8 GB Intel iMac a more responsive CPU-only path than Qwen. Qwen models can produce better answers on stronger hardware, but `qwen3:4b` was too slow for this target machine. Use `llama3.2:3b`, not `llama3.1:3b`; Llama 3.1 starts at larger 8B-class models in Ollama.
 
 The bot reads these optional environment settings:
 
@@ -254,7 +255,7 @@ Future bot updates:
 homebot-refresh
 ```
 
-### Roll Back an Existing iMac Install from Qwen
+### Keep Only the Default Ollama Model
 
 On the Xubuntu iMac:
 
@@ -273,12 +274,30 @@ If `homebot-refresh` is not installed yet, run the script directly:
 ./scripts/imac-refresh.sh
 ```
 
-The refreshed bot defaults to `llama3.2:3b`. To remove local Qwen model files and free disk space:
+The refreshed bot defaults to `llama3.2:3b`. To remove every other local Ollama model and free model disk space:
 
 ```bash
-ollama list | awk 'NR > 1 && tolower($1) ~ /^qwen/ { print $1 }' | xargs -r -n1 ollama rm
+./scripts/ollama-prune-models.sh llama3.2:3b
 ollama list
 du -sh ~/.ollama/models 2>/dev/null || true
+```
+
+To free memory after pruning models:
+
+```bash
+sudo systemctl restart ollama
+sudo systemctl restart aibot
+ollama ps
+```
+
+General safe disk cleanup:
+
+```bash
+sudo apt autoremove --purge -y
+sudo apt clean
+sudo journalctl --vacuum-time=7d
+rm -rf ~/.cache/pip ~/.cache/thumbnails/*
+df -h /
 ```
 
 Manual restart:
