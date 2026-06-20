@@ -231,6 +231,8 @@ export HOME_BOT_EXTERNAL_TIMEOUT=120
 
 The service installer writes those values to `/etc/default/aibot`.
 
+If a private integration lives in another repo, such as `myLibrary`, reinstall that integration after reinstalling or resetting `aibot.service`. The public bot only provides the generic `HOME_BOT_EXTERNAL_WORKER` hook; the private repo owns its own worker path, sync command, and repo-specific environment values.
+
 ---
 
 ## Part 6: Systemd Service (Always-On)
